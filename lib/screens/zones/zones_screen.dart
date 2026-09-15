@@ -51,7 +51,7 @@ class _ZonesScreenState extends State<ZonesScreen> {
 
     return RefreshIndicator(
       onRefresh: _refresh,
-      color: AppColors.accent,
+      color: AppColors.marca,
       child: FutureBuilder<List<Zone>>(
         future: _future,
         builder: (context, snapshot) {
@@ -120,10 +120,10 @@ class _ZoneCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.12),
+                  color: AppColors.marca.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.map_outlined, color: AppColors.accent),
+                child: const Icon(Icons.map_outlined, color: AppColors.marca),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -132,19 +132,19 @@ class _ZoneCard extends StatelessWidget {
                   children: [
                     Text(
                       zone.name,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.ink),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.texto),
                     ),
                     if (zone.location != null) ...[
                       const SizedBox(height: 2),
                       Text(
                         zone.location!,
-                        style: TextStyle(color: AppColors.ink.withValues(alpha: 0.6), fontSize: 14),
+                        style: const TextStyle(color: AppColors.textoMute, fontSize: 14),
                       ),
                     ],
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.ink),
+              const Icon(Icons.chevron_right, color: AppColors.textoMute),
             ],
           ),
         ),

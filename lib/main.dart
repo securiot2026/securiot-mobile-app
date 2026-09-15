@@ -31,7 +31,7 @@ class SecurIotApp extends StatelessWidget {
             title: 'SecurIoT',
             debugShowCheckedModeBanner: false,
             navigatorKey: AppNavigator.key,
-            theme: AppTheme.light(),
+            theme: AppTheme.dark(),
             locale: localeProvider.locale,
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: const [
@@ -58,8 +58,8 @@ class _RootRouter extends StatelessWidget {
     switch (auth.status) {
       case AuthStatus.unknown:
         return const Scaffold(
-          backgroundColor: AppColors.surface,
-          body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
+          backgroundColor: AppColors.noche,
+          body: Center(child: CircularProgressIndicator(color: AppColors.marca)),
         );
       case AuthStatus.unauthenticated:
         return const LoginScreen();

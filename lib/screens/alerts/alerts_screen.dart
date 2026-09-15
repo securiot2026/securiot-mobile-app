@@ -10,6 +10,7 @@ import '../../core/i18n/app_localizations.dart';
 import '../../core/i18n/error_localizer.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_theme.dart';
 import '../../models/alert.dart';
 import '../../models/device.dart';
 import '../../models/zone.dart';
@@ -124,7 +125,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
               _applyFilters();
               await _future.catchError((_) => <Alert>[]);
             },
-            color: AppColors.accent,
+            color: AppColors.marca,
             child: FutureBuilder<List<Alert>>(
               future: _future,
               builder: (context, snapshot) {
@@ -209,7 +210,7 @@ class _FilterBar extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return Container(
-      color: Colors.white,
+      color: AppColors.surfaceCard,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -286,12 +287,15 @@ class _FilterDropdown<T> extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.ink.withValues(alpha: 0.2)),
+              border: Border.all(color: AppColors.texto.withValues(alpha: 0.2)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButton<T>(
               value: value,
-              hint: Text(label, style: const TextStyle(fontSize: 14)),
+              dropdownColor: AppColors.surfaceCard,
+              iconEnabledColor: AppColors.textoMute,
+              hint: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textoMute)),
+              style: const TextStyle(fontSize: 14, color: AppColors.texto),
               items: items,
               onChanged: onChanged,
             ),
@@ -327,24 +331,24 @@ class _AlertCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   alert.status == 'active' ? l10n.t('statusActive') : l10n.t('statusResolved'),
-                  style: TextStyle(color: AppColors.ink.withValues(alpha: 0.6), fontSize: 12, fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: AppColors.textoMute, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
                 Text(
                   formatter.format(alert.createdAt),
-                  style: TextStyle(color: AppColors.ink.withValues(alpha: 0.5), fontSize: 12),
+                  style: AppTheme.dataText(),
                 ),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               alert.message,
-              style: const TextStyle(fontSize: 16, color: AppColors.ink),
+              style: const TextStyle(fontSize: 16, color: AppColors.texto),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               '$zoneName · $deviceName',
-              style: TextStyle(color: AppColors.ink.withValues(alpha: 0.6), fontSize: 14),
+              style: const TextStyle(color: AppColors.textoMute, fontSize: 14),
             ),
           ],
         ),
