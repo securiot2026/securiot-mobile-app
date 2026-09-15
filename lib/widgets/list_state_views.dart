@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
@@ -17,11 +18,11 @@ class ListLoadingView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: AppColors.accent),
+          const CircularProgressIndicator(color: AppColors.marca),
           const SizedBox(height: AppSpacing.md),
           Semantics(
             liveRegion: true,
-            child: Text(label, style: const TextStyle(color: AppColors.ink)),
+            child: Text(label, style: const TextStyle(color: AppColors.texto)),
           ),
         ],
       ),
@@ -56,7 +57,7 @@ class ListErrorView extends StatelessWidget {
               child: Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.ink),
+                style: const TextStyle(color: AppColors.texto),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -91,18 +92,18 @@ class ListEmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: AppColors.ink.withValues(alpha: 0.35)),
+            Icon(icon, size: 40, color: AppColors.textoMute),
             const SizedBox(height: AppSpacing.md),
             Text(
               heading,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.ink),
+              style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, height: 1.2, color: AppColors.texto),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               body,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.ink.withValues(alpha: 0.7)),
+              style: const TextStyle(color: AppColors.textoMute),
             ),
           ],
         ),

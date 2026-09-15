@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/i18n/app_localizations.dart';
@@ -29,7 +30,14 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.appTitle),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset('assets/brand/icono-2.svg', width: 22, height: 22),
+            const SizedBox(width: AppSpacing.sm),
+            Text(l10n.appTitle),
+          ],
+        ),
         actions: [
           const LanguageSwitcher(),
           Semantics(

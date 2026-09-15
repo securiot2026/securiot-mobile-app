@@ -8,6 +8,7 @@ import '../../core/i18n/app_localizations.dart';
 import '../../core/i18n/error_localizer.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_theme.dart';
 import '../../models/device.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/list_state_views.dart';
@@ -57,7 +58,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
     final l10n = AppLocalizations.of(context);
     final content = RefreshIndicator(
       onRefresh: _refresh,
-      color: AppColors.accent,
+      color: AppColors.marca,
       child: FutureBuilder<List<Device>>(
         future: _future,
         builder: (context, snapshot) {
@@ -135,7 +136,7 @@ class _DeviceCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     device.name,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.ink),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.texto),
                   ),
                 ),
                 if (device.isOnline != null) OnlineStatusBadge(isOnline: device.isOnline!),
@@ -146,7 +147,7 @@ class _DeviceCard extends StatelessWidget {
               device.lastReading != null
                   ? '${l10n.t('lastReading')}: ${device.lastReading!.sensorType} · ${device.lastReading!.displayValue} · ${formatter.format(device.lastReading!.recordedAt)}'
                   : l10n.t('noReadingYet'),
-              style: TextStyle(color: AppColors.ink.withValues(alpha: 0.65), fontSize: 14),
+              style: AppTheme.dataText(),
             ),
           ],
         ),
