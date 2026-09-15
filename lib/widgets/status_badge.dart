@@ -26,9 +26,9 @@ class OnlineStatusBadge extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withValues(alpha: 0.16),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: color.withValues(alpha: 0.4)),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -68,8 +68,9 @@ class SeverityBadge extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
+            color: color.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
