@@ -66,6 +66,18 @@ class AppLocalizations {
       'severityMedium': 'Medium',
       'severityHigh': 'High',
       'clearFilters': 'Clear filters',
+      'controlFeedTitle': 'Live feed',
+      'controlFeedImageAlt': 'Latest camera frame from this device',
+      'controlFeedLoadError': "Could not load the latest frame. Retrying…",
+      'controlPanTiltTitle': 'Camera position',
+      'controlPanLeft': 'Pan left',
+      'controlPanRight': 'Pan right',
+      'controlTiltUp': 'Tilt up',
+      'controlTiltDown': 'Tilt down',
+      'controlLightTitle': 'Light',
+      'controlBuzzerTitle': 'Buzzer',
+      'controlStatusPending': 'Sending…',
+      'controlStatusDelivered': 'Delivered',
     },
     'es': {
       'appTitle': 'SecurIoT',
@@ -117,6 +129,18 @@ class AppLocalizations {
       'severityMedium': 'Media',
       'severityHigh': 'Alta',
       'clearFilters': 'Limpiar filtros',
+      'controlFeedTitle': 'Feed en vivo',
+      'controlFeedImageAlt': 'Último frame de cámara de este dispositivo',
+      'controlFeedLoadError': 'No pudimos cargar el último frame. Reintentando…',
+      'controlPanTiltTitle': 'Posición de cámara',
+      'controlPanLeft': 'Mover a la izquierda',
+      'controlPanRight': 'Mover a la derecha',
+      'controlTiltUp': 'Inclinar hacia arriba',
+      'controlTiltDown': 'Inclinar hacia abajo',
+      'controlLightTitle': 'Luz',
+      'controlBuzzerTitle': 'Buzzer',
+      'controlStatusPending': 'Enviando…',
+      'controlStatusDelivered': 'Entregado',
     },
   };
 
@@ -132,6 +156,23 @@ class AppLocalizations {
       return n == 1 ? '1 dispositivo' : '$n dispositivos';
     }
     return n == 1 ? '1 device' : '$n devices';
+  }
+
+  /// EXTR-02: current zone occupancy count.
+  String occupancyCount(int n) {
+    if (locale.languageCode == 'es') {
+      return 'Ocupación de la zona hoy: $n';
+    }
+    return 'Zone occupancy today: $n';
+  }
+
+  /// FEED-05: relative freshness label for the live feed ("updated Xs ago"),
+  /// never just a raw timestamp — pairs with the live indicator dot.
+  String updatedSecondsAgo(int seconds) {
+    if (locale.languageCode == 'es') {
+      return seconds < 1 ? 'Actualizado justo ahora' : 'Actualizado hace ${seconds}s';
+    }
+    return seconds < 1 ? 'Updated just now' : 'Updated ${seconds}s ago';
   }
 
   String get appTitle => t('appTitle');

@@ -86,10 +86,17 @@ class ApiClient {
     return (result as List<dynamic>?) ?? const [];
   }
 
-  Future<Map<String, dynamic>> getOne(String path) async {
+  Future<Map<String, dynamic>> getOne(String path, [Map<String, String>? query]) async {
     final result = await _send(
-      () async => _http.get(_uri(path), headers: await _headers()),
+      () async => _http.get(_uri(path, query), headers: await _headers()),
     );
     return result as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> postOne(String path, Map<String, dynamic> body) async {
+    final result = await _send(
+      () async => _http.post(_uri(path), headers: await _headers(), body: jsonEncode(body)),
+    );
+    return (result as Map<String, dynamic>?) ?? const {};
   }
 }

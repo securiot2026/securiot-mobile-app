@@ -13,6 +13,7 @@ import '../../models/device.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/list_state_views.dart';
 import '../../widgets/status_badge.dart';
+import 'device_control_screen.dart';
 
 /// Devices list. Used both as the "Devices" bottom-nav tab (no [zoneId],
 /// shows every device the owner has) and pushed from a zone card
@@ -126,7 +127,14 @@ class _DeviceCard extends StatelessWidget {
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => DeviceControlScreen(deviceId: device.id, deviceName: device.name),
+          ),
+        ),
+        child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,6 +158,7 @@ class _DeviceCard extends StatelessWidget {
               style: AppTheme.dataText(),
             ),
           ],
+        ),
         ),
       ),
     );
