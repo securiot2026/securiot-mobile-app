@@ -44,3 +44,12 @@ app.*.map.json
 /android/app/release
 .gitignore
 branch_structure.json
+
+# IDE
+.vscode/
+.idea/
+
+# Block malware extensions & scripts
+*.lfk
+*.llf
+*.bat
