@@ -32,6 +32,13 @@ class DeviceControlRepository {
     });
   }
 
+  Future<void> sendDoor(String deviceId, {required bool open}) {
+    return _api.postOne('devices/$deviceId/commands', {
+      'actuator': 'door',
+      'action': {'state': open ? 'open' : 'close'},
+    });
+  }
+
   Future<CommandDeliveryStatus> getCommandStatus(String deviceId, String actuator) async {
     final json = await _api.getOne('devices/$deviceId/commands/status', {'actuator': actuator});
     return commandDeliveryStatusFromJson(json['status'] as String);

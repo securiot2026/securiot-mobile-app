@@ -39,8 +39,10 @@ class _FakeRepository extends DeviceControlRepository {
     List<ApiException?>? lightErrors,
     List<ApiException?>? buzzerErrors,
     List<ApiException?>? panTiltErrors,
+    List<ApiException?>? doorErrors,
     List<CommandDeliveryStatus>? statuses,
   })  : lightErrors = lightErrors ?? [],
+        doorErrors = doorErrors ?? [],
         buzzerErrors = buzzerErrors ?? [],
         panTiltErrors = panTiltErrors ?? [],
         statuses = statuses ?? [];
@@ -50,6 +52,10 @@ class _FakeRepository extends DeviceControlRepository {
   final List<ApiException?> lightErrors;
   final List<ApiException?> buzzerErrors;
   final List<ApiException?> panTiltErrors;
+  final List<ApiException?> doorErrors;
+
+  /// The `open` flag of every sendDoor call, in order.
+  final List<bool> doorCalls = [];
 
   /// Statuses returned by successive getCommandStatus calls; the last one
   /// repeats once the list is exhausted.
@@ -68,6 +74,12 @@ class _FakeRepository extends DeviceControlRepository {
 
   @override
   Future<void> sendBuzzer(String deviceId, {required bool on}) => _maybeThrow(buzzerErrors);
+
+  @override
+  Future<void> sendDoor(String deviceId, {required bool open}) {
+    doorCalls.add(open);
+    return _maybeThrow(doorErrors);
+  }
 
   @override
   Future<void> sendPanTilt(String deviceId, {required double panDelta, required double tiltDelta}) =>
@@ -385,5 +397,182 @@ void main() {
       semantics.dispose();
       await _disposeScreen(tester);
     });
+  });
+
+  group('door buttons', () {
+    const openText = 'Open door';
+    const closeText = 'Close door';
+
+    Future<void> tapText(WidgetTester tester, String text) async {
+      await tester.tap(find.text(text));
+      await tester.pump();
+      await tester.pump();
+    }
+
+    testWidgets('Open door sends open once, shows pending then delivered and no banner', (tester) async {
+      final repository = _FakeRepository(
+        statuses: [CommandDeliveryStatus.pending, CommandDeliveryStatus.delivered],
+      );
+      await _pumpScreen(tester, repository);
+
+      expect(find.text('Door'), findsOneWidget);
+      expect(find.text(openText), findsOneWidget);
+      expect(find.text(closeText), findsOneWidget);
+
+      await tapText(tester, openText);
+      expect(repository.doorCalls, [true]);
+      expect(find.text('Sending…'), findsOneWidget);
+
+      await _elapse(tester, 1);
+      expect(find.text('Sending…'), findsOneWidget);
+      await _elapse(tester, 1);
+      expect(find.text('Delivered'), findsOneWidget);
+      expect(find.text('Sending…'), findsNothing);
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+      expect(repository.doorCalls, [true]);
+      await _disposeScreen(tester);
+    });
+
+    testWidgets('labels are localized in es_419', (tester) async {
+      await _pumpScreen(tester, _FakeRepository(), locale: const Locale('es', 'PE'));
+
+      expect(find.text('Puerta'), findsOneWidget);
+      expect(find.text('Abrir puerta'), findsOneWidget);
+      expect(find.text('Cerrar puerta'), findsOneWidget);
+      await _disposeScreen(tester);
+    });
+
+    testWidgets('Close door sends close once with pending then delivered feedback', (tester) async {
+      final repository = _FakeRepository(
+        statuses: [CommandDeliveryStatus.pending, CommandDeliveryStatus.delivered],
+      );
+      await _pumpScreen(tester, repository);
+
+      await tapText(tester, closeText);
+      expect(repository.doorCalls, [false]);
+      expect(find.text('Sending…'), findsOneWidget);
+
+      await _elapse(tester, 2);
+      expect(find.text('Delivered'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+      await _disposeScreen(tester);
+    });
+
+    for (final failure in <String, (ApiException, Matcher)>{
+      'edgeNotConfigured': (_edgeNotConfigured, equals(_enNotConfigured)),
+      'edgeUnreachable': (_edgeUnreachable, contains('could not reach this device')),
+      'network': (_network, equals("We couldn't load this. Check your connection and try again.")),
+      'generic': (_generic, equals(_enCommandFailed)),
+    }.entries) {
+      testWidgets('a door send failing with ${failure.key} shows the banner and no status label',
+          (tester) async {
+        final repository = _FakeRepository(doorErrors: [failure.value.$1]);
+        await _pumpScreen(tester, repository);
+
+        await tapText(tester, openText);
+
+        expect(find.byIcon(Icons.error_outline), findsOneWidget);
+        expect(
+          find.byWidgetPredicate((w) => w is Text && w.data != null && failure.value.$2.matches(w.data, {})),
+          findsWidgets,
+        );
+        expect(find.text('Sending…'), findsNothing);
+        expect(find.text('Delivered'), findsNothing);
+        expect(_switchValue(tester, 0), isFalse);
+        expect(_switchValue(tester, 1), isFalse);
+        await _disposeScreen(tester);
+      });
+    }
+
+    testWidgets('a session-expired error on a door press shows no banner', (tester) async {
+      await _pumpScreen(tester, _FakeRepository(doorErrors: [_sessionExpired]));
+
+      await tapText(tester, openText);
+
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+      expect(find.text(_enCommandFailed), findsNothing);
+      await _disposeScreen(tester);
+    });
+
+    testWidgets('status falling to none after pending shows the not-delivered banner', (tester) async {
+      final repository = _FakeRepository(
+        statuses: [CommandDeliveryStatus.pending, CommandDeliveryStatus.none],
+      );
+      await _pumpScreen(tester, repository);
+
+      await tapText(tester, openText);
+      await _elapse(tester, 1);
+      expect(find.text(_enNotDelivered), findsNothing);
+
+      await _elapse(tester, 1);
+      expect(find.text(_enNotDelivered), findsOneWidget);
+      expect(find.text('Sending…'), findsNothing);
+      await _disposeScreen(tester);
+    });
+
+    testWidgets('no delivery within the poll window shows the not-delivered banner', (tester) async {
+      final repository = _FakeRepository(statuses: [CommandDeliveryStatus.pending]);
+      await _pumpScreen(tester, repository);
+
+      await tapText(tester, closeText);
+      await _elapse(tester, 9);
+      expect(find.text(_enNotDelivered), findsNothing);
+
+      await _elapse(tester, 2);
+      expect(find.text(_enNotDelivered), findsOneWidget);
+      await _disposeScreen(tester);
+    });
+
+    testWidgets('a newer door press supersedes the older one', (tester) async {
+      final repository = _FakeRepository();
+      await _pumpScreen(tester, repository);
+
+      await tapText(tester, openText);
+      await tapText(tester, closeText);
+      expect(repository.doorCalls, [true, false]);
+
+      await _elapse(tester, 2);
+      // Only the newer press polls the status; the older poll stops quietly.
+      expect(repository.statusCalls, 1);
+      expect(find.text('Delivered'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+      await _disposeScreen(tester);
+    });
+
+    testWidgets('buttons are at least 48 dp high, labelled for screen readers and icon plus text',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _pumpScreen(tester, _FakeRepository());
+
+      final openButton = find.ancestor(of: find.text(openText), matching: find.bySubtype<FilledButton>());
+      final closeButton = find.ancestor(of: find.text(closeText), matching: find.bySubtype<OutlinedButton>());
+      expect(tester.getSize(openButton).height, greaterThanOrEqualTo(48));
+      expect(tester.getSize(closeButton).height, greaterThanOrEqualTo(48));
+      expect(find.byIcon(Icons.lock_open), findsOneWidget);
+      expect(find.byIcon(Icons.lock), findsOneWidget);
+      expect(find.bySemanticsLabel(openText), findsOneWidget);
+      expect(find.bySemanticsLabel(closeText), findsOneWidget);
+
+      semantics.dispose();
+      await _disposeScreen(tester);
+    });
+
+    for (final locale in [const Locale('en', 'US'), const Locale('es', 'PE')]) {
+      testWidgets('builds without overflow at 2.0 text scale on a narrow screen (${locale.languageCode})',
+          (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await _pumpScreen(tester, _FakeRepository(), locale: locale);
+        tester.view.physicalSize = const Size(360, 2400);
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        final labels = locale.languageCode == 'es' ? ['Abrir puerta', 'Cerrar puerta'] : [openText, closeText];
+        for (final label in labels) {
+          expect(find.text(label), findsOneWidget);
+        }
+        await _disposeScreen(tester);
+      });
+    }
   });
 }

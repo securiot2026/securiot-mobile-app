@@ -288,6 +288,14 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
               );
             },
           ),
+          const SizedBox(height: AppSpacing.md),
+          // No revert callback: a door press has no toggle state to restore,
+          // and the command sequence lets a newer press supersede an older one.
+          _DoorCard(
+            status: _actuatorStatus['door'],
+            onOpen: () => _sendCommand('door', () => _repository.sendDoor(widget.deviceId, open: true)),
+            onClose: () => _sendCommand('door', () => _repository.sendDoor(widget.deviceId, open: false)),
+          ),
         ],
       ),
     );
@@ -528,6 +536,72 @@ class _ToggleControlCard extends StatelessWidget {
               toggled: value,
               label: l10n.t(titleKey),
               child: Switch(value: value, onChanged: onChanged, activeThumbColor: AppColors.marca),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Manual door control: two plain buttons, each with icon plus text and a
+/// 48 dp minimum height. The buttons sit in a [Wrap] so they reflow onto two
+/// lines at large text scale instead of overflowing.
+class _DoorCard extends StatelessWidget {
+  const _DoorCard({required this.status, required this.onOpen, required this.onClose});
+
+  final CommandDeliveryStatus? status;
+  final VoidCallback onOpen;
+  final VoidCallback onClose;
+
+  static const double _buttonHeight = 48;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final openLabel = l10n.t('controlDoorOpen');
+    final closeLabel = l10n.t('controlDoorClose');
+    const minimumSize = Size(AppSpacing.minTouchTarget, _buttonHeight);
+
+    return Card(
+      color: AppColors.surfaceCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.meeting_room_outlined, color: AppColors.texto),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(l10n.t('controlDoorTitle'),
+                      style: const TextStyle(color: AppColors.texto, fontSize: 15)),
+                ),
+                _StatusLabel(status: status),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                // Default button semantics expose the visible text as the
+                // label and keep the tap action, so no extra wrapper is needed.
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(minimumSize: minimumSize),
+                  onPressed: onOpen,
+                  icon: const Icon(Icons.lock_open),
+                  label: Text(openLabel),
+                ),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(minimumSize: minimumSize),
+                  onPressed: onClose,
+                  icon: const Icon(Icons.lock),
+                  label: Text(closeLabel),
+                ),
+              ],
             ),
           ],
         ),
