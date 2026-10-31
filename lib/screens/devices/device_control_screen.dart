@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/api/device_control_repository.dart';
 import '../../core/i18n/app_localizations.dart';
+import '../../core/i18n/error_localizer.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../models/command_status.dart';
@@ -26,33 +27,55 @@ const _panTiltStep = 15.0;
 /// live feed polls on its own timer and always shows a relative "updated
 /// Xs ago" freshness label, never just the raw frame. EXTR-02: the zone
 /// occupancy counter polls alongside the feed.
+/// Resolves a user-facing message in the active language, so the text
+/// follows a language switch instead of being frozen at failure time.
+typedef _LocalizedMessage = String Function(AppLocalizations l10n);
+
 class DeviceControlScreen extends StatefulWidget {
-  const DeviceControlScreen({super.key, required this.deviceId, required this.deviceName});
+  const DeviceControlScreen({
+    super.key,
+    required this.deviceId,
+    required this.deviceName,
+    this.repository,
+  });
 
   final String deviceId;
   final String deviceName;
+
+  /// Injectable for tests; the real [DeviceControlRepository] is created in
+  /// `initState` when none is given.
+  final DeviceControlRepository? repository;
 
   @override
   State<DeviceControlScreen> createState() => _DeviceControlScreenState();
 }
 
 class _DeviceControlScreenState extends State<DeviceControlScreen> {
-  final _repository = DeviceControlRepository();
+  late final DeviceControlRepository _repository;
 
   Timer? _feedTimer;
   Timer? _freshnessTicker;
   LatestFrame? _frame;
   Occupancy? _occupancy;
-  String? _feedErrorKey;
+  _LocalizedMessage? _feedError;
   bool _feedLoading = true;
 
   bool _lightOn = false;
   bool _buzzerOn = false;
   final Map<String, CommandDeliveryStatus> _actuatorStatus = {};
 
+  /// D-07: localization key of the last manual-command failure, shown in the
+  /// dismissible banner at the top of the screen.
+  _LocalizedMessage? _commandError;
+
+  /// Latest command sequence per actuator. A newer press supersedes an older
+  /// one, so a stale failure never reverts or overrides the newer toggle.
+  final Map<String, int> _commandSeq = {};
+
   @override
   void initState() {
     super.initState();
+    _repository = widget.repository ?? DeviceControlRepository();
     _pollFeed();
     _feedTimer = Timer.periodic(_feedPollInterval, (_) => _pollFeed());
     // Repaints the "updated Xs ago" label between feed polls, independent
@@ -75,7 +98,7 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
       if (!mounted) return;
       setState(() {
         _frame = frame;
-        _feedErrorKey = null;
+        _feedError = null;
         _feedLoading = false;
       });
     } on ApiException catch (e) {
@@ -85,7 +108,7 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
       }
       if (!mounted) return;
       setState(() {
-        _feedErrorKey = 'controlFeedLoadError';
+        _feedError = _feedErrorFor(e);
         _feedLoading = false;
       });
     }
@@ -100,7 +123,40 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
     }
   }
 
-  Future<void> _sendCommand(String actuator, Future<void> Function() send) async {
+  /// D-07: distinguishes a missing edgeUrl, an unreachable Edge and a device
+  /// that has not captured a frame yet (404) from a generic load error.
+  _LocalizedMessage _feedErrorFor(ApiException e) {
+    switch (e.kind) {
+      case ApiErrorKind.edgeNotConfigured:
+      case ApiErrorKind.edgeUnreachable:
+        return (l10n) => l10n.messageFor(e.kind);
+      default:
+        final key = e.statusCode == 404 ? 'controlFeedNoFrameYet' : 'controlFeedLoadError';
+        return (l10n) => l10n.t(key);
+    }
+  }
+
+  _LocalizedMessage _commandErrorFor(ApiException e) {
+    switch (e.kind) {
+      case ApiErrorKind.edgeNotConfigured:
+      case ApiErrorKind.edgeUnreachable:
+      case ApiErrorKind.network:
+        return (l10n) => l10n.messageFor(e.kind);
+      default:
+        return (l10n) => l10n.t('controlErrorCommandFailed');
+    }
+  }
+
+  /// Sends one manual command. On failure the error banner is shown and
+  /// [revert] returns the toggle to its previous position so the UI never
+  /// keeps a state the device did not receive (D-07).
+  Future<void> _sendCommand(
+    String actuator,
+    Future<void> Function() send, {
+    VoidCallback? revert,
+  }) async {
+    final seq = (_commandSeq[actuator] ?? 0) + 1;
+    _commandSeq[actuator] = seq;
     setState(() => _actuatorStatus[actuator] = CommandDeliveryStatus.pending);
     try {
       await send();
@@ -109,26 +165,57 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
         await context.read<AuthProvider>().forceLogoutOnSessionExpired();
         return;
       }
-      if (mounted) setState(() => _actuatorStatus.remove(actuator));
+      if (!mounted) return;
+      final current = _commandSeq[actuator] == seq;
+      setState(() {
+        if (current) {
+          _actuatorStatus.remove(actuator);
+          revert?.call();
+        }
+        _commandError = _commandErrorFor(e);
+      });
       return;
     }
-    _pollCommandStatus(actuator);
+    _pollCommandStatus(actuator, seq, revert);
   }
 
-  Future<void> _pollCommandStatus(String actuator) async {
-    final deadline = DateTime.now().add(_commandStatusPollTimeout);
-    while (mounted && DateTime.now().isBefore(deadline)) {
+  void _markNotDelivered(String actuator, VoidCallback? revert) {
+    setState(() {
+      _actuatorStatus.remove(actuator);
+      _commandError = (l10n) => l10n.t('controlErrorCommandNotDelivered');
+      revert?.call();
+    });
+  }
+
+  Future<void> _pollCommandStatus(String actuator, int seq, VoidCallback? revert) async {
+    // Counted polls instead of wall-clock time: same 10 s window, and the
+    // loop stays deterministic under fake time in widget tests.
+    final maxPolls =
+        _commandStatusPollTimeout.inMilliseconds ~/ _commandStatusPollInterval.inMilliseconds;
+    for (var attempt = 0; attempt < maxPolls; attempt++) {
       await Future.delayed(_commandStatusPollInterval);
-      if (!mounted) return;
+      if (!mounted || _commandSeq[actuator] != seq) return;
       try {
         final status = await _repository.getCommandStatus(widget.deviceId, actuator);
-        if (!mounted) return;
-        setState(() => _actuatorStatus[actuator] = status);
+        if (!mounted || _commandSeq[actuator] != seq) return;
+        if (status == CommandDeliveryStatus.none) {
+          // The Edge dropped the command (expired undelivered).
+          _markNotDelivered(actuator, revert);
+          return;
+        }
+        setState(() {
+          _actuatorStatus[actuator] = status;
+          if (status == CommandDeliveryStatus.delivered) _commandError = null;
+        });
         if (status == CommandDeliveryStatus.delivered) return;
-      } on ApiException {
+      } on ApiException catch (e) {
+        if (e.isAuthError && mounted) {
+          await context.read<AuthProvider>().forceLogoutOnSessionExpired();
+        }
         return;
       }
     }
+    if (mounted && _commandSeq[actuator] == seq) _markNotDelivered(actuator, revert);
   }
 
   String _freshnessLabel(AppLocalizations l10n) {
@@ -147,9 +234,16 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
+          if (_commandError != null) ...[
+            _ErrorBanner(
+              message: _commandError!(l10n),
+              onDismiss: () => setState(() => _commandError = null),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
           _FeedCard(
             loading: _feedLoading,
-            errorMessage: _feedErrorKey != null ? l10n.t(_feedErrorKey!) : null,
+            errorMessage: _feedError?.call(l10n),
             frame: _frame,
             freshnessLabel: _freshnessLabel(l10n),
             occupancy: _occupancy,
@@ -169,8 +263,13 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
             value: _lightOn,
             status: _actuatorStatus['light'],
             onChanged: (value) {
+              final previous = _lightOn;
               setState(() => _lightOn = value);
-              _sendCommand('light', () => _repository.sendLight(widget.deviceId, on: value));
+              _sendCommand(
+                'light',
+                () => _repository.sendLight(widget.deviceId, on: value),
+                revert: () => _lightOn = previous,
+              );
             },
           ),
           const SizedBox(height: AppSpacing.md),
@@ -180,11 +279,71 @@ class _DeviceControlScreenState extends State<DeviceControlScreen> {
             value: _buzzerOn,
             status: _actuatorStatus['buzzer'],
             onChanged: (value) {
+              final previous = _buzzerOn;
               setState(() => _buzzerOn = value);
-              _sendCommand('buzzer', () => _repository.sendBuzzer(widget.deviceId, on: value));
+              _sendCommand(
+                'buzzer',
+                () => _repository.sendBuzzer(widget.deviceId, on: value),
+                revert: () => _buzzerOn = previous,
+              );
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// D-07: announced, dismissible error banner. Icon plus text (never color
+/// alone) and a dismiss control at the minimum touch target.
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message, required this.onDismiss});
+
+  final String message;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Card(
+      color: AppColors.surfaceCard,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.alerta),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(left: AppSpacing.md),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.alerta),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                // Only the message is the live region: the dismiss control
+                // stays its own focusable, actionable semantics node.
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(message, style: const TextStyle(color: AppColors.alerta, fontSize: 14)),
+                ),
+              ),
+            ),
+            Semantics(
+              container: true,
+              button: true,
+              label: l10n.t('controlErrorDismiss'),
+              child: SizedBox(
+                width: AppSpacing.minTouchTarget,
+                height: AppSpacing.minTouchTarget,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.texto),
+                  onPressed: onDismiss,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
