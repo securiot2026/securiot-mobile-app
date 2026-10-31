@@ -10,6 +10,10 @@ extension ApiErrorLocalization on AppLocalizations {
         return sessionExpired;
       case ApiErrorKind.network:
         return t('loginErrorNetwork');
+      case ApiErrorKind.edgeNotConfigured:
+        return t('controlErrorEdgeNotConfigured');
+      case ApiErrorKind.edgeUnreachable:
+        return t('controlErrorEdgeUnreachable');
       case ApiErrorKind.generic:
         return t('loginErrorGeneric');
     }

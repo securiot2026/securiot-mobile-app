@@ -78,6 +78,12 @@ class AppLocalizations {
       'controlBuzzerTitle': 'Buzzer',
       'controlStatusPending': 'Sending…',
       'controlStatusDelivered': 'Delivered',
+      'controlErrorEdgeNotConfigured': 'This device has no Edge URL yet. Open the Web App, go to Devices, open this device\'s Face recognition page, save the Edge URL, and try again.',
+      'controlErrorEdgeUnreachable': 'We could not reach this device\'s Edge API. Check that it is running and connected to the network.',
+      'controlErrorCommandFailed': 'The command was not sent. Try again.',
+      'controlErrorCommandNotDelivered': 'The device did not pick up the command in time. Check that it is online, then try again.',
+      'controlFeedNoFrameYet': 'No picture yet. This device has not sent a frame.',
+      'controlErrorDismiss': 'Dismiss',
     },
     'es': {
       'appTitle': 'SecurIoT',
@@ -141,6 +147,12 @@ class AppLocalizations {
       'controlBuzzerTitle': 'Buzzer',
       'controlStatusPending': 'Enviando…',
       'controlStatusDelivered': 'Entregado',
+      'controlErrorEdgeNotConfigured': 'Este dispositivo aún no tiene una URL de Edge. Abre la Web App, ve a Dispositivos, entra a la página de Reconocimiento facial de este dispositivo, guarda la URL de Edge e inténtalo de nuevo.',
+      'controlErrorEdgeUnreachable': 'No pudimos conectar con la API de Edge de este dispositivo. Verifica que esté en ejecución y conectada a la red.',
+      'controlErrorCommandFailed': 'No se envió el comando. Inténtalo de nuevo.',
+      'controlErrorCommandNotDelivered': 'El dispositivo no recibió el comando a tiempo. Verifica que esté en línea e inténtalo de nuevo.',
+      'controlFeedNoFrameYet': 'Aún no hay imagen. Este dispositivo no ha enviado ningún frame.',
+      'controlErrorDismiss': 'Cerrar',
     },
   };
 
