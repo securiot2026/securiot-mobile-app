@@ -4,14 +4,15 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// persists across restarts: the JWT and the chosen language.
 class SecureStorage {
   SecureStorage({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   static const _tokenKey = 'securiot_access_token';
   static const _languageKey = 'securiot_lang';
 
   final FlutterSecureStorage _storage;
 
-  Future<void> saveToken(String token) => _storage.write(key: _tokenKey, value: token);
+  Future<void> saveToken(String token) =>
+      _storage.write(key: _tokenKey, value: token);
 
   Future<String?> readToken() => _storage.read(key: _tokenKey);
 

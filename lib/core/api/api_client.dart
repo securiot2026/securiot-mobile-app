@@ -11,8 +11,8 @@ import 'api_exception.dart';
 /// every authenticated request and normalizes failures into [ApiException].
 class ApiClient {
   ApiClient({http.Client? httpClient, SecureStorage? storage})
-      : _http = httpClient ?? http.Client(),
-        _storage = storage ?? SecureStorage();
+    : _http = httpClient ?? http.Client(),
+      _storage = storage ?? SecureStorage();
 
   final http.Client _http;
   final SecureStorage _storage;
@@ -53,7 +53,48 @@ class ApiClient {
     if (response.statusCode == 401) {
       throw ApiException(ApiErrorKind.sessionExpired, statusCode: 401);
     }
-    throw ApiException(ApiErrorKind.generic, statusCode: response.statusCode);
+    throw ApiException(
+      _classifyFailure(response),
+      statusCode: response.statusCode,
+    );
+  }
+
+  /// Maps a non-2xx, non-401 response to an [ApiErrorKind]. The body is read
+  /// only to classify it; its text is discarded and never stored on the
+  /// exception, so server wording cannot reach the UI.
+  ApiErrorKind _classifyFailure(http.Response response) {
+    final status = response.statusCode;
+    if (status == 502 || status == 503 || status == 504) {
+      return ApiErrorKind.edgeUnreachable;
+    }
+    if (status == 400 &&
+        _errorText(
+          response.body,
+        ).toLowerCase().contains('edgeurl not configured')) {
+      return ApiErrorKind.edgeNotConfigured;
+    }
+    return ApiErrorKind.generic;
+  }
+
+  /// Extracts the server's error text from `{"error": "..."}` or the Nest
+  /// `{"message": "..."}` / `{"message": ["..."]}` shapes. Returns an empty
+  /// string for empty, non-JSON or unexpectedly shaped bodies.
+  String _errorText(String body) {
+    if (body.isEmpty) return '';
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is! Map) return '';
+      final error = decoded['error'];
+      if (error is String) return error;
+      final message = decoded['message'];
+      if (message is String) return message;
+      if (message is List && message.isNotEmpty && message.first is String) {
+        return message.first as String;
+      }
+    } on FormatException {
+      return '';
+    }
+    return '';
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -74,22 +115,45 @@ class ApiClient {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
     if (response.statusCode == 401) {
-      throw const ApiException(ApiErrorKind.invalidCredentials, statusCode: 401);
+      throw const ApiException(
+        ApiErrorKind.invalidCredentials,
+        statusCode: 401,
+      );
     }
     throw ApiException(ApiErrorKind.generic, statusCode: response.statusCode);
   }
 
-  Future<List<dynamic>> getList(String path, [Map<String, String>? query]) async {
+  Future<List<dynamic>> getList(
+    String path, [
+    Map<String, String>? query,
+  ]) async {
     final result = await _send(
       () async => _http.get(_uri(path, query), headers: await _headers()),
     );
     return (result as List<dynamic>?) ?? const [];
   }
 
-  Future<Map<String, dynamic>> getOne(String path) async {
+  Future<Map<String, dynamic>> getOne(
+    String path, [
+    Map<String, String>? query,
+  ]) async {
     final result = await _send(
-      () async => _http.get(_uri(path), headers: await _headers()),
+      () async => _http.get(_uri(path, query), headers: await _headers()),
     );
     return result as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> postOne(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final result = await _send(
+      () async => _http.post(
+        _uri(path),
+        headers: await _headers(),
+        body: jsonEncode(body),
+      ),
+    );
+    return (result as Map<String, dynamic>?) ?? const {};
   }
 }

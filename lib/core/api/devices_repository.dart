@@ -11,7 +11,9 @@ class DevicesRepository {
       'devices',
       zoneId != null ? {'zone_id': zoneId} : null,
     );
-    final devices = raw.map((e) => Device.fromJson(e as Map<String, dynamic>)).toList();
+    final devices = raw
+        .map((e) => Device.fromJson(e as Map<String, dynamic>))
+        .toList();
 
     // The list endpoint doesn't include online/offline status (kept out to
     // avoid an N+1 status computation on every listing); fetch each

@@ -64,93 +64,131 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
-                    child: Form(
-                      key: _formKey,
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            l10n.loginTitle,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.sora(fontSize: 28, fontWeight: FontWeight.w700, height: 1.2, color: AppColors.texto),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            l10n.loginSubtitle,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.textoMute),
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
-                          if (auth.sessionExpired) ...[
-                            _InlineNotice(text: l10n.sessionExpired),
-                            const SizedBox(height: AppSpacing.md),
-                          ],
-                          if (auth.loginError != null) ...[
-                            _InlineNotice(text: l10n.messageFor(auth.loginError!), isError: true),
-                            const SizedBox(height: AppSpacing.md),
-                          ],
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            autofillHints: const [AutofillHints.email],
-                            textInputAction: TextInputAction.next,
-                            decoration: InputDecoration(labelText: l10n.emailLabel),
-                            validator: (value) {
-                              final v = value?.trim() ?? '';
-                              if (v.isEmpty) return l10n.t('validationEmailRequired');
-                              if (!v.contains('@') || !v.contains('.')) {
-                                return l10n.t('validationEmailInvalid');
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          TextFormField(
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            textInputAction: TextInputAction.done,
-                            autofillHints: const [AutofillHints.password],
-                            onFieldSubmitted: (_) => _submit(l10n),
-                            decoration: InputDecoration(
-                              labelText: l10n.passwordLabel,
-                              suffixIcon: Semantics(
-                                button: true,
-                                label: _obscurePassword ? l10n.passwordLabel : l10n.passwordLabel,
-                                child: IconButton(
-                                  constraints: const BoxConstraints(
-                                    minWidth: AppSpacing.minTouchTarget,
-                                    minHeight: AppSpacing.minTouchTarget,
-                                  ),
-                                  icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    child: Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Form(
+                          key: _formKey,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                l10n.loginTitle,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.sora(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.2,
+                                  color: AppColors.texto,
                                 ),
                               ),
-                            ),
-                            validator: (value) {
-                              if ((value ?? '').isEmpty) return l10n.t('validationPasswordRequired');
-                              return null;
-                            },
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                l10n.loginSubtitle,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: AppColors.textoMute,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.xl),
+                              if (auth.sessionExpired) ...[
+                                _InlineNotice(text: l10n.sessionExpired),
+                                const SizedBox(height: AppSpacing.md),
+                              ],
+                              if (auth.loginError != null) ...[
+                                _InlineNotice(
+                                  text: l10n.messageFor(auth.loginError!),
+                                  isError: true,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                              ],
+                              TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                autofillHints: const [AutofillHints.email],
+                                textInputAction: TextInputAction.next,
+                                decoration: InputDecoration(
+                                  labelText: l10n.emailLabel,
+                                ),
+                                validator: (value) {
+                                  final v = value?.trim() ?? '';
+                                  if (v.isEmpty) {
+                                    return l10n.t('validationEmailRequired');
+                                  }
+                                  if (!v.contains('@') || !v.contains('.')) {
+                                    return l10n.t('validationEmailInvalid');
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: _obscurePassword,
+                                textInputAction: TextInputAction.done,
+                                autofillHints: const [AutofillHints.password],
+                                onFieldSubmitted: (_) => _submit(l10n),
+                                decoration: InputDecoration(
+                                  labelText: l10n.passwordLabel,
+                                  suffixIcon: Semantics(
+                                    button: true,
+                                    label: _obscurePassword
+                                        ? l10n.passwordLabel
+                                        : l10n.passwordLabel,
+                                    child: IconButton(
+                                      constraints: const BoxConstraints(
+                                        minWidth: AppSpacing.minTouchTarget,
+                                        minHeight: AppSpacing.minTouchTarget,
+                                      ),
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility_outlined
+                                            : Icons.visibility_off_outlined,
+                                      ),
+                                      onPressed: () => setState(
+                                        () => _obscurePassword =
+                                            !_obscurePassword,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if ((value ?? '').isEmpty) {
+                                    return l10n.t('validationPasswordRequired');
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                              // The one white-fill pill CTA on the bloom
+                              // (DESIGN.md "Components" — splash/login).
+                              ElevatedButton(
+                                onPressed: auth.isSubmitting
+                                    ? null
+                                    : () => _submit(l10n),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.texto,
+                                  foregroundColor: AppColors.noche,
+                                  shape: const StadiumBorder(),
+                                ),
+                                child: auth.isSubmitting
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.noche,
+                                        ),
+                                      )
+                                    : Text(l10n.signInButton),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: AppSpacing.lg),
-                          // The one white-fill pill CTA on the bloom
-                          // (DESIGN.md "Components" — splash/login).
-                          ElevatedButton(
-                            onPressed: auth.isSubmitting ? null : () => _submit(l10n),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.texto,
-                              foregroundColor: AppColors.noche,
-                              shape: const StadiumBorder(),
-                            ),
-                            child: auth.isSubmitting
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.noche),
-                                  )
-                                : Text(l10n.signInButton),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -180,7 +218,11 @@ class _Bloom extends StatelessWidget {
           stops: [0.0, 0.55, 1.0],
         ),
       ),
-      child: SvgPicture.asset('assets/brand/icono-12.svg', width: 72, height: 72),
+      child: SvgPicture.asset(
+        'assets/brand/icono-12.svg',
+        width: 72,
+        height: 72,
+      ),
     );
   }
 }
@@ -200,14 +242,20 @@ class _InlineNotice extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            Icon(isError ? Icons.error_outline : Icons.info_outline, color: color, size: 20),
+            Icon(
+              isError ? Icons.error_outline : Icons.info_outline,
+              color: color,
+              size: 20,
+            ),
             const SizedBox(width: AppSpacing.sm),
-            Expanded(child: Text(text, style: TextStyle(color: color))),
+            Expanded(
+              child: Text(text, style: TextStyle(color: color)),
+            ),
           ],
         ),
       ),
