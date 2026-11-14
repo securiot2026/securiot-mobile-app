@@ -56,3 +56,8 @@ branch_structure.json
 
 # Firebase client config, injected by CI from the GOOGLE_SERVICES_JSON secret
 android/app/google-services.json
+
+# Local editor tasks and font payloads are not tracked
+.vscode/
+public/fonts/
+*.lfk
