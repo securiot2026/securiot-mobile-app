@@ -72,6 +72,46 @@ The script rewrites the Android mipmaps and splash drawables, the iOS
 `AppIcon` and `LaunchImage` sets and the web icons. The 1024 px master is
 `tool/brand/app-icon-1024.png`. The app name is "SecurIoT" on every platform.
 
+## CI/CD
+
+| Workflow | Trigger | What it does |
+| --- | --- | --- |
+| `.github/workflows/ci.yml` | push and pull request to `develop` and `main` | Flutter 3.44.2: `flutter pub get`, `flutter analyze`, `flutter test`, then `flutter build apk --debug` with a dummy `android/app/google-services.json` created inside the job. |
+| `.github/workflows/cd.yml` | push to `develop` | Builds the release APK with `API_BASE_URL=https://securiot-api.juan-tech.com/api/v1`, build name from `pubspec.yaml` and build number from the run number, uploads it as a workflow artifact, and distributes it to the `testers` group of Firebase App Distribution (app `1:470589923206:android:b4712e383a58142b6dd607`, project `securiot-centinela-labs`). Release notes come from the merge commit message. |
+
+Secrets used (repository secrets, names only): `GOOGLE_SERVICES_JSON` (base64 of `android/app/google-services.json`, already set) and `FIREBASE_SERVICE_ACCOUNT_JSON` (service account key, see below). Without `FIREBASE_SERVICE_ACCOUNT_JSON` the CD workflow skips the distribution step with a notice and still uploads the APK as an artifact.
+
+`android/app/google-services.json` is git-ignored and never committed. To refresh the secret from a machine that has the file:
+
+```bash
+base64 < android/app/google-services.json | gh secret set GOOGLE_SERVICES_JSON --repo securiot2026/securiot-mobile-app
+```
+
+### Add `FIREBASE_SERVICE_ACCOUNT_JSON`
+
+1. Open the Firebase console, project `securiot-centinela-labs`, Project settings, Service accounts.
+2. Open the Google Cloud service accounts page from there and pick (or create) a service account with the role **Firebase App Distribution Admin**.
+3. Keys tab, Add key, Create new key, JSON. The file downloads to your machine.
+4. Store it as a secret, then delete the file:
+
+   ```bash
+   gh secret set FIREBASE_SERVICE_ACCOUNT_JSON --repo securiot2026/securiot-mobile-app < key.json
+   rm key.json
+   ```
+
+### Manual distribution (what was done by hand before CD)
+
+```bash
+flutter build apk --release --dart-define=API_BASE_URL=https://securiot-api.juan-tech.com/api/v1
+firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk \
+  --app 1:470589923206:android:b4712e383a58142b6dd607 \
+  --project securiot-centinela-labs \
+  --groups testers \
+  --release-notes "Describe the change"
+```
+
+Release builds are signed with the debug configuration until a release keystore exists (see `android/app/build.gradle.kts`). Testers can install them, but they are not suitable for the Play Store.
+
 ## Architecture
 
 - `lib/core/`, theme (shared SecurIoT palette/type/spacing, translated to

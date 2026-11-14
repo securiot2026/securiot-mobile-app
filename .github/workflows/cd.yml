@@ -1,0 +1,70 @@
+name: CD
+
+# A merge to develop builds the release APK and sends it to Firebase App Distribution (group testers).
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  API_BASE_URL: https://securiot-api.juan-tech.com/api/v1
+
+jobs:
+  distribute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.2
+          channel: stable
+          cache: true
+      - name: Write google-services.json from the secret
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          test -n "$GOOGLE_SERVICES_JSON" || { echo "GOOGLE_SERVICES_JSON secret is not set"; exit 1; }
+          printf '%s' "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json
+      - run: flutter pub get
+      - name: Build the release APK
+        run: |
+          BUILD_NAME=$(grep '^version:' pubspec.yaml | sed -E 's/version:[[:space:]]*//; s/\+.*//')
+          flutter build apk --release \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --build-name="$BUILD_NAME" \
+            --build-number="${{ github.run_number }}"
+      - name: Upload the APK as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: securiot-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+      - name: Release notes from the merge commit
+        run: |
+          {
+            echo "RELEASE_NOTES<<NOTES_EOF"
+            git log -1 --pretty=%B
+            echo "NOTES_EOF"
+          } >> "$GITHUB_ENV"
+      - name: Firebase App Distribution skipped
+        if: env.FIREBASE_SERVICE_ACCOUNT_JSON == ''
+        run: echo "::notice title=Distribution skipped::FIREBASE_SERVICE_ACCOUNT_JSON is not set. The APK is available as a workflow artifact only."
+      - name: Distribute to Firebase App Distribution
+        if: env.FIREBASE_SERVICE_ACCOUNT_JSON != ''
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.7.1
+        with:
+          appId: 1:470589923206:android:b4712e383a58142b6dd607
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          groups: testers
+          file: build/app/outputs/flutter-apk/app-release.apk
+          releaseNotes: ${{ env.RELEASE_NOTES }}
