@@ -30,6 +30,11 @@ Widget _wrap(Widget child, {Locale locale = const Locale('en', 'US')}) {
 
 void main() {
   testWidgets('LoginScreen shows validation errors on empty submit', (tester) async {
+    // Tall surface so the Sign in button is on screen regardless of the host's font metrics.
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(_wrap(const LoginScreen()));
     await tester.pumpAndSettle();
 
