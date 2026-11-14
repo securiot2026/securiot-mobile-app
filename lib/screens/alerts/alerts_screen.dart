@@ -15,7 +15,9 @@ import '../../models/alert.dart';
 import '../../models/device.dart';
 import '../../models/zone.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/filter_chips_bar.dart';
 import '../../widgets/list_state_views.dart';
+import '../../widgets/search_field.dart';
 import '../../widgets/status_badge.dart';
 
 class AlertsScreen extends StatefulWidget {
@@ -33,6 +35,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
   String? _zoneFilter;
   String? _deviceFilter;
   String? _statusFilter;
+  final _searchController = TextEditingController();
+  String _query = '';
 
   List<Zone> _zones = const [];
   List<Device> _devices = const [];
@@ -43,6 +47,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
     super.initState();
     _future = _load();
     _loadFilterOptions();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadFilterOptions() async {
@@ -79,11 +89,24 @@ class _AlertsScreenState extends State<AlertsScreen> {
     setState(() => _future = _load());
   }
 
-  bool get _hasActiveFilters => _zoneFilter != null || _deviceFilter != null || _statusFilter != null;
+  bool get _hasActiveFilters =>
+      _zoneFilter != null || _deviceFilter != null || _statusFilter != null;
 
-  String _zoneName(String id) => _zones.firstWhere((z) => z.id == id, orElse: () => Zone(id: id, name: id, ownerId: '', createdAt: DateTime.now())).name;
+  String _zoneName(String id) => _zones
+      .firstWhere(
+        (z) => z.id == id,
+        orElse: () =>
+            Zone(id: id, name: id, ownerId: '', createdAt: DateTime.now()),
+      )
+      .name;
 
-  String _deviceName(String id) => _devices.firstWhere((d) => d.id == id, orElse: () => Device(id: id, name: id, zoneId: '', createdAt: DateTime.now())).name;
+  String _deviceName(String id) => _devices
+      .firstWhere(
+        (d) => d.id == id,
+        orElse: () =>
+            Device(id: id, name: id, zoneId: '', createdAt: DateTime.now()),
+      )
+      .name;
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +142,33 @@ class _AlertsScreenState extends State<AlertsScreen> {
             _applyFilters();
           },
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            0,
+          ),
+          child: SearchField(
+            controller: _searchController,
+            label: l10n.t('searchAlertsHint'),
+            onChanged: (v) => setState(() => _query = v),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        FilterChipsBar<String?>(
+          groupLabel: l10n.t('filterGroupStatus'),
+          selected: _statusFilter,
+          onSelected: (v) {
+            setState(() => _statusFilter = v);
+            _applyFilters();
+          },
+          options: [
+            FilterOption(value: null, label: l10n.t('filterAll')),
+            FilterOption(value: 'active', label: l10n.t('statusActive')),
+            FilterOption(value: 'resolved', label: l10n.t('statusResolved')),
+          ],
+        ),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {
@@ -140,7 +190,11 @@ class _AlertsScreenState extends State<AlertsScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: SizedBox(
                       height: MediaQuery.of(context).size.height * 0.5,
-                      child: ListErrorView(message: message, retryLabel: l10n.retry, onRetry: _applyFilters),
+                      child: ListErrorView(
+                        message: message,
+                        retryLabel: l10n.retry,
+                        onRetry: _applyFilters,
+                      ),
                     ),
                   );
                 }
@@ -153,21 +207,63 @@ class _AlertsScreenState extends State<AlertsScreen> {
                       child: ListEmptyView(
                         icon: Icons.notifications_none,
                         heading: l10n.t('alertsEmptyHeading'),
-                        body: _hasActiveFilters ? l10n.t('alertsFilteredEmpty') : l10n.t('alertsEmptyBody'),
+                        body: _hasActiveFilters
+                            ? l10n.t('alertsFilteredEmpty')
+                            : l10n.t('alertsEmptyBody'),
+                        actionLabel: _hasActiveFilters
+                            ? l10n.t('clearFilters')
+                            : null,
+                        onAction: _hasActiveFilters
+                            ? () {
+                                setState(() {
+                                  _zoneFilter = null;
+                                  _deviceFilter = null;
+                                  _statusFilter = null;
+                                });
+                                _applyFilters();
+                              }
+                            : null,
                       ),
                     ),
                   );
                 }
-                return ListView.separated(
+                final q = _query.trim().toLowerCase();
+                final visible = q.isEmpty
+                    ? alerts
+                    : alerts
+                          .where(
+                            (a) =>
+                                a.message.toLowerCase().contains(q) ||
+                                _zoneName(a.zoneId).toLowerCase().contains(q) ||
+                                _deviceName(
+                                  a.deviceId,
+                                ).toLowerCase().contains(q),
+                          )
+                          .toList();
+                return ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  itemCount: alerts.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                  itemCount: visible.isEmpty ? 2 : visible.length + 1,
                   itemBuilder: (context, index) {
-                    final alert = alerts[index];
-                    return _AlertCard(
-                      alert: alert,
-                      zoneName: _zoneName(alert.zoneId),
-                      deviceName: _deviceName(alert.deviceId),
+                    if (index == 0) return ResultCount(count: visible.length);
+                    if (visible.isEmpty) {
+                      return SizedBox(
+                        height: 280,
+                        child: ListEmptyView(
+                          icon: Icons.search_off,
+                          heading: l10n.t('alertsEmptyHeading'),
+                          body: l10n.t('searchNoResults'),
+                        ),
+                      );
+                    }
+                    final alert = visible[index - 1];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: _AlertCard(
+                        alert: alert,
+                        zoneName: _zoneName(alert.zoneId),
+                        deviceName: _deviceName(alert.deviceId),
+                      ),
                     );
                   },
                 );
@@ -211,7 +307,10 @@ class _FilterBar extends StatelessWidget {
 
     return Container(
       color: AppColors.surfaceCard,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
@@ -221,7 +320,8 @@ class _FilterBar extends StatelessWidget {
               value: zoneFilter,
               items: [
                 DropdownMenuItem(value: null, child: Text(l10n.t('filterAll'))),
-                for (final z in zones) DropdownMenuItem(value: z.id, child: Text(z.name)),
+                for (final z in zones)
+                  DropdownMenuItem(value: z.id, child: Text(z.name)),
               ],
               onChanged: onZoneChanged,
             ),
@@ -231,20 +331,10 @@ class _FilterBar extends StatelessWidget {
               value: deviceFilter,
               items: [
                 DropdownMenuItem(value: null, child: Text(l10n.t('filterAll'))),
-                for (final d in devices) DropdownMenuItem(value: d.id, child: Text(d.name)),
+                for (final d in devices)
+                  DropdownMenuItem(value: d.id, child: Text(d.name)),
               ],
               onChanged: onDeviceChanged,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            _FilterDropdown<String>(
-              label: l10n.t('filterStatus'),
-              value: statusFilter,
-              items: [
-                DropdownMenuItem(value: null, child: Text(l10n.t('filterAll'))),
-                DropdownMenuItem(value: 'active', child: Text(l10n.t('statusActive'))),
-                DropdownMenuItem(value: 'resolved', child: Text(l10n.t('statusResolved'))),
-              ],
-              onChanged: onStatusChanged,
             ),
             if (hasActiveFilters) ...[
               const SizedBox(width: AppSpacing.sm),
@@ -288,13 +378,19 @@ class _FilterDropdown<T> extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.texto.withValues(alpha: 0.2)),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: DropdownButton<T>(
               value: value,
               dropdownColor: AppColors.surfaceCard,
               iconEnabledColor: AppColors.textoMute,
-              hint: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textoMute)),
+              hint: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textoMute,
+                ),
+              ),
               style: const TextStyle(fontSize: 14, color: AppColors.texto),
               items: items,
               onChanged: onChanged,
@@ -307,7 +403,11 @@ class _FilterDropdown<T> extends StatelessWidget {
 }
 
 class _AlertCard extends StatelessWidget {
-  const _AlertCard({required this.alert, required this.zoneName, required this.deviceName});
+  const _AlertCard({
+    required this.alert,
+    required this.zoneName,
+    required this.deviceName,
+  });
 
   final Alert alert;
   final String zoneName;
@@ -319,7 +419,9 @@ class _AlertCard extends StatelessWidget {
     final formatter = DateFormat.yMMMd(l10n.locale.toLanguageTag()).add_Hm();
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
@@ -330,8 +432,14 @@ class _AlertCard extends StatelessWidget {
                 SeverityBadge(severity: alert.severityLevel),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
-                  alert.status == 'active' ? l10n.t('statusActive') : l10n.t('statusResolved'),
-                  style: const TextStyle(color: AppColors.textoMute, fontSize: 12, fontWeight: FontWeight.w600),
+                  alert.status == 'active'
+                      ? l10n.t('statusActive')
+                      : l10n.t('statusResolved'),
+                  style: const TextStyle(
+                    color: AppColors.textoMute,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const Spacer(),
                 Text(

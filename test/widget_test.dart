@@ -33,6 +33,9 @@ void main() {
     await tester.pumpWidget(_wrap(const LoginScreen()));
     await tester.pumpAndSettle();
 
+    // The form now sits in a card, so the button can start below the fold.
+    await tester.ensureVisible(find.text('Sign in').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sign in').last);
     await tester.pump();
 
