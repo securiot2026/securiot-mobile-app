@@ -1,11 +1,11 @@
 {
-    "name": "securiot_mobile",
-    "short_name": "securiot_mobile",
+    "name": "SecurIoT",
+    "short_name": "SecurIoT",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0B0E14",
+    "theme_color": "#0B0E14",
+    "description": "SecurIoT: monitor zones, devices and alerts from your phone.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
