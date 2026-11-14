@@ -11,8 +11,8 @@ import 'api_exception.dart';
 /// every authenticated request and normalizes failures into [ApiException].
 class ApiClient {
   ApiClient({http.Client? httpClient, SecureStorage? storage})
-      : _http = httpClient ?? http.Client(),
-        _storage = storage ?? SecureStorage();
+    : _http = httpClient ?? http.Client(),
+      _storage = storage ?? SecureStorage();
 
   final http.Client _http;
   final SecureStorage _storage;
@@ -53,7 +53,10 @@ class ApiClient {
     if (response.statusCode == 401) {
       throw ApiException(ApiErrorKind.sessionExpired, statusCode: 401);
     }
-    throw ApiException(_classifyFailure(response), statusCode: response.statusCode);
+    throw ApiException(
+      _classifyFailure(response),
+      statusCode: response.statusCode,
+    );
   }
 
   /// Maps a non-2xx, non-401 response to an [ApiErrorKind]. The body is read
@@ -65,7 +68,9 @@ class ApiClient {
       return ApiErrorKind.edgeUnreachable;
     }
     if (status == 400 &&
-        _errorText(response.body).toLowerCase().contains('edgeurl not configured')) {
+        _errorText(
+          response.body,
+        ).toLowerCase().contains('edgeurl not configured')) {
       return ApiErrorKind.edgeNotConfigured;
     }
     return ApiErrorKind.generic;
@@ -110,28 +115,44 @@ class ApiClient {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
     if (response.statusCode == 401) {
-      throw const ApiException(ApiErrorKind.invalidCredentials, statusCode: 401);
+      throw const ApiException(
+        ApiErrorKind.invalidCredentials,
+        statusCode: 401,
+      );
     }
     throw ApiException(ApiErrorKind.generic, statusCode: response.statusCode);
   }
 
-  Future<List<dynamic>> getList(String path, [Map<String, String>? query]) async {
+  Future<List<dynamic>> getList(
+    String path, [
+    Map<String, String>? query,
+  ]) async {
     final result = await _send(
       () async => _http.get(_uri(path, query), headers: await _headers()),
     );
     return (result as List<dynamic>?) ?? const [];
   }
 
-  Future<Map<String, dynamic>> getOne(String path, [Map<String, String>? query]) async {
+  Future<Map<String, dynamic>> getOne(
+    String path, [
+    Map<String, String>? query,
+  ]) async {
     final result = await _send(
       () async => _http.get(_uri(path, query), headers: await _headers()),
     );
     return result as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> postOne(String path, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> postOne(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
     final result = await _send(
-      () async => _http.post(_uri(path), headers: await _headers(), body: jsonEncode(body)),
+      () async => _http.post(
+        _uri(path),
+        headers: await _headers(),
+        body: jsonEncode(body),
+      ),
     );
     return (result as Map<String, dynamic>?) ?? const {};
   }

@@ -13,3 +13,13 @@ class AppSpacing {
   /// A11Y.md SC 2.5.8 house rule: minimum touch target regardless of scale.
   static const double minTouchTarget = 44;
 }
+
+/// Shared corner radii. Cards and tiles use [md], inputs and buttons [sm],
+/// badges and chips [pill].
+class AppRadius {
+  const AppRadius._();
+
+  static const double sm = 8;
+  static const double md = 12;
+  static const double pill = 999;
+}

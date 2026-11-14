@@ -6,7 +6,11 @@ class AlertsRepository {
 
   final ApiClient _api;
 
-  Future<List<Alert>> fetchAlerts({String? zoneId, String? deviceId, String? status}) async {
+  Future<List<Alert>> fetchAlerts({
+    String? zoneId,
+    String? deviceId,
+    String? status,
+  }) async {
     final query = <String, String>{};
     if (zoneId != null) query['zone_id'] = zoneId;
     if (deviceId != null) query['device_id'] = deviceId;

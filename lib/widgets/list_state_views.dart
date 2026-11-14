@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
+import 'empty_state.dart';
 
 /// Loading state: a spinner paired with a live-announced "Loading…" label
 /// (a spinner alone conveys nothing to a screen reader), per the sibling
@@ -50,7 +50,11 @@ class ListErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 40, color: AppColors.statusOffline),
+            const Icon(
+              Icons.wifi_off_rounded,
+              size: 40,
+              color: AppColors.statusOffline,
+            ),
             const SizedBox(height: AppSpacing.md),
             Semantics(
               liveRegion: true,
@@ -63,7 +67,10 @@ class ListErrorView extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             SizedBox(
               height: AppSpacing.minTouchTarget,
-              child: OutlinedButton(onPressed: onRetry, child: Text(retryLabel)),
+              child: OutlinedButton(
+                onPressed: onRetry,
+                child: Text(retryLabel),
+              ),
             ),
           ],
         ),
@@ -78,36 +85,24 @@ class ListEmptyView extends StatelessWidget {
     required this.icon,
     required this.heading,
     required this.body,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
   final String heading;
   final String body;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 40, color: AppColors.textoMute),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              heading,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, height: 1.2, color: AppColors.texto),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              body,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textoMute),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: icon,
+      heading: heading,
+      body: body,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 }

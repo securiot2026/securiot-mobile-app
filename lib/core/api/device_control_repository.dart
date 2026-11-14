@@ -7,11 +7,16 @@ import 'api_client.dart';
 /// 06.1/7/9/11), the same `callDeviceEdgeApi()`-backed contract the Web
 /// App already consumes.
 class DeviceControlRepository {
-  DeviceControlRepository({ApiClient? apiClient}) : _api = apiClient ?? ApiClient();
+  DeviceControlRepository({ApiClient? apiClient})
+    : _api = apiClient ?? ApiClient();
 
   final ApiClient _api;
 
-  Future<void> sendPanTilt(String deviceId, {required double panDelta, required double tiltDelta}) {
+  Future<void> sendPanTilt(
+    String deviceId, {
+    required double panDelta,
+    required double tiltDelta,
+  }) {
     return _api.postOne('devices/$deviceId/commands', {
       'actuator': 'pan_tilt',
       'action': {'pan_delta': panDelta, 'tilt_delta': tiltDelta},
@@ -39,8 +44,13 @@ class DeviceControlRepository {
     });
   }
 
-  Future<CommandDeliveryStatus> getCommandStatus(String deviceId, String actuator) async {
-    final json = await _api.getOne('devices/$deviceId/commands/status', {'actuator': actuator});
+  Future<CommandDeliveryStatus> getCommandStatus(
+    String deviceId,
+    String actuator,
+  ) async {
+    final json = await _api.getOne('devices/$deviceId/commands/status', {
+      'actuator': actuator,
+    });
     return commandDeliveryStatusFromJson(json['status'] as String);
   }
 
