@@ -58,6 +58,20 @@ Android/iOS toolchain installed. Visual/on-device behavior has not been
 confirmed on a simulator or real hardware, that verification is still
 pending.
 
+## App icon and name
+
+The launcher, splash and web icons are generated from `assets/brand/icono-2.svg`
+on the `#0B0E14` ground. To regenerate them (needs `rsvg-convert` from
+`brew install librsvg` and `pip install pillow`):
+
+```bash
+python3 tool/generate_icons.py
+```
+
+The script rewrites the Android mipmaps and splash drawables, the iOS
+`AppIcon` and `LaunchImage` sets and the web icons. The 1024 px master is
+`tool/brand/app-icon-1024.png`. The app name is "SecurIoT" on every platform.
+
 ## Architecture
 
 - `lib/core/`, theme (shared SecurIoT palette/type/spacing, translated to
@@ -70,7 +84,9 @@ pending.
 - `lib/screens/`, one folder per screen/tab (`auth`, `shell`, `zones`,
   `devices`, `alerts`).
 - `lib/widgets/`, shared UI: status/severity badges (icon + text + color),
-  loading/error/empty state views, the language switcher.
+  loading/error/empty state views, the language switcher, and the Astryx
+  inspired set (`StatusTile`, `FilterChipsBar`, `SearchField`, `EmptyState`,
+  `SectionHeader`).
 
 ## Design system
 
